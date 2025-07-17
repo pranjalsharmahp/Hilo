@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "423837307709",
+    "project_id": "hilo-1",
+    "storage_bucket": "hilo-1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:423837307709:android:b00b959385ff5fd6c22b54",
+        "android_client_info": {
+          "package_name": "com.example.hilo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdc-WApsOCsheehKD_4qJEsqpGTHSq_40"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

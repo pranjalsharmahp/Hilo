@@ -52,6 +52,7 @@ void showAddConversationDialog(
                   _otherUserEmail,
                   message,
                 );
+
                 onSuccess();
                 Navigator.of(context).pop();
               }

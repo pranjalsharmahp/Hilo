@@ -1,9 +1,12 @@
 // lib/socket/socket_service.dart
 import 'dart:convert';
+import 'package:hilo/crud/local_database_service.dart';
+import 'package:hilo/users/user.dart';
 import 'package:http/http.dart' as http;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class SocketService {
+  void Function(dynamic data)? onMessageReceived;
   // Singleton pattern
   static final SocketService _instance = SocketService._internal();
   factory SocketService() => _instance;
@@ -30,9 +33,35 @@ class SocketService {
       _connected = true;
     });
 
-    socket.on('messageReceived', (data) {
-      print('Message received: $data');
-      // Add event notification logic here (e.g., notify listeners)
+    socket.on('messageReceived', (data) async {
+      try {
+        print('TOP OF HANDLER'); // will always run
+
+        await LocalDatabaseService().insertMessage({
+          'sender_email': data['sender_email'],
+          'receiver_email': data['receiver_email'],
+          'content': data['content'],
+          'timestamp': data['timestamp'] ?? DateTime.now().toIso8601String(),
+        });
+        print('AFTER insertMessage');
+
+        await LocalDatabaseService().upsertConversation({
+          'user1_email': data['sender_email'],
+          'user2_email': data['receiver_email'],
+          'last_message': data['content'],
+          'last_sender_email': data['sender_email'],
+          'last_updated': data['timestamp'] ?? DateTime.now().toIso8601String(),
+        });
+        print('AFTER upsertConversation');
+
+        print('Message received: $data');
+        if (onMessageReceived != null) {
+          onMessageReceived!(data);
+        }
+      } catch (e, stack) {
+        print('!!! ERROR in messageReceived handler: $e');
+        print(stack);
+      }
     });
 
     socket.onDisconnect((_) {
@@ -47,6 +76,49 @@ class SocketService {
     socket.onError((err) {
       print('General error: $err');
     });
+  }
+
+  Future<int> registerUser(String email, String name) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://hilo-backend-ozkp.onrender.com/users/register-user'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'name': name}),
+      );
+
+      if (response.statusCode == 201) {
+        print('User registered successfully');
+        return 201; // HTTP Created
+      } else if (response.statusCode == 409) {
+        print('Email already exists');
+        return 409; // Conflict
+      } else {
+        print('Failed to register user: ${response.body}');
+        return response.statusCode;
+      }
+    } catch (e) {
+      print('Error registering user: $e');
+      return 500; // Internal Server Error
+    }
+  }
+
+  static Future<User?> fetchUserByEmail(String email) async {
+    String baseUrl = 'https://hilo-backend-ozkp.onrender.com';
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/users/$email'));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        return User.fromJson(data);
+      } else {
+        print('Failed to fetch user: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching user: $e');
+      return null;
+    }
   }
 
   Future<void> sendMessage(
@@ -81,6 +153,21 @@ class SocketService {
 
       if (response.statusCode == 201) {
         print('Conversation updated on backend.');
+        await LocalDatabaseService().insertMessage({
+          'sender_email': senderEmail,
+          'receiver_email': receiverEmail,
+          'content': message,
+          'timestamp': DateTime.now().toIso8601String(),
+          'isSeen': 1,
+          'type': 'TEXT',
+        });
+        await LocalDatabaseService().upsertConversation({
+          'user1_email': senderEmail, // or sorted by alpha for uniqness
+          'user2_email': receiverEmail,
+          'last_message': message,
+          'last_sender_email': senderEmail,
+          'last_updated': DateTime.now().toIso8601String(),
+        });
       } else {
         print('Failed to update conversation: ${response.body}');
       }

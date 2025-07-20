@@ -16,7 +16,7 @@ class Message {
       senderEmail: json['sender_email'],
       receiverEmail: json['receiver_email'],
       content: json['content'],
-      timestamp: json['timestamp'],
+      timestamp: json['timestamp'] ?? DateTime.now().toIso8601String(),
     );
   }
 }

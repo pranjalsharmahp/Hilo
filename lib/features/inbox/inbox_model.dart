@@ -5,9 +5,11 @@ class Conversation {
   final String lastMessage;
   final String lastSenderEmail;
   final DateTime lastUpdated;
+  String? otherUserName;
   final String otherUserEmail;
 
-  Conversation({
+  Conversation(
+    this.otherUserName, {
     required this.otherUserEmail,
     required this.id,
     required this.user1Email,
@@ -19,6 +21,7 @@ class Conversation {
 
   factory Conversation.fromJson(Map<String, dynamic> json) {
     return Conversation(
+      json['other_user_name'] ?? '',
       otherUserEmail: json['other_user_email'],
       id: json['id'],
       user1Email: json['user1_email'],

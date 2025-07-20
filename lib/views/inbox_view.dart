@@ -7,8 +7,9 @@ import 'package:hilo/features/inbox/bloc/inbox_event.dart';
 import 'package:hilo/features/inbox/bloc/inbox_state.dart';
 
 import 'package:hilo/features/inbox/inbox_model.dart';
+import 'package:hilo/socket/socket_service.dart';
 import 'package:hilo/views/chat_view.dart';
-import 'package:hilo/views/login_view.dart';
+import 'package:hilo/views/login/bloc/login_view.dart';
 
 class InboxScreen extends StatelessWidget {
   final String userEmail;
@@ -93,6 +94,7 @@ class InboxView extends StatelessWidget {
                 itemCount: conversations.length,
                 itemBuilder: (context, index) {
                   final convo = conversations[index];
+
                   final isSentByUser = convo.lastSenderEmail == userEmail;
                   return InkWell(
                     onTap: () {
@@ -134,7 +136,7 @@ class InboxView extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  convo.otherUserEmail,
+                                  convo.otherUserName!,
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,

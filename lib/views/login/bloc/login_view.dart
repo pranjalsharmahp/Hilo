@@ -11,7 +11,7 @@ import 'package:hilo/views/inbox_view.dart';
 import 'package:hilo/views/login/bloc/login_bloc.dart';
 import 'package:hilo/views/login/bloc/login_event.dart';
 import 'package:hilo/views/login/bloc/login_state.dart';
-import 'package:hilo/views/login/register_view.dart';
+import 'package:hilo/views/register/register_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});

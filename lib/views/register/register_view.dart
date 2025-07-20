@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hilo/dialogs/error_dialog.dart';
 import 'dart:developer' as devtools;
 
-import 'package:hilo/views/login_view.dart';
+import 'package:hilo/views/login/bloc/login_view.dart';
 import 'package:hilo/views/register/bloc/register_bloc.dart';
 import 'package:hilo/views/register/bloc/register_event.dart';
 import 'package:hilo/views/register/bloc/register_state.dart';
@@ -19,11 +19,13 @@ class RegisterView extends StatefulWidget {
 class _RegisterViewState extends State<RegisterView> {
   late final TextEditingController _email;
   late final TextEditingController _password;
+  late final TextEditingController _name;
 
   @override
   void initState() {
     _email = TextEditingController();
     _password = TextEditingController();
+    _name = TextEditingController();
     super.initState();
   }
 
@@ -31,6 +33,7 @@ class _RegisterViewState extends State<RegisterView> {
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _name.dispose();
     super.dispose();
   }
 
@@ -71,6 +74,22 @@ class _RegisterViewState extends State<RegisterView> {
                   style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 32),
+
+                // Name Field
+                TextField(
+                  controller: _name,
+                  decoration: InputDecoration(
+                    labelText: 'Name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  keyboardType: TextInputType.name,
+                ),
+                const SizedBox(height: 16),
+
+                // Email Field
                 TextField(
                   controller: _email,
                   decoration: InputDecoration(
@@ -83,6 +102,8 @@ class _RegisterViewState extends State<RegisterView> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
+
+                // Password Field
                 TextField(
                   controller: _password,
                   obscureText: true,
@@ -95,6 +116,8 @@ class _RegisterViewState extends State<RegisterView> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // Register Button
                 BlocBuilder<RegisterBloc, RegisterState>(
                   builder: (context, state) {
                     return SizedBox(
@@ -105,12 +128,13 @@ class _RegisterViewState extends State<RegisterView> {
                               : ElevatedButton(
                                 onPressed: () {
                                   devtools.log(
-                                    'Registering user with email: ${_email.text}',
+                                    'Registering user with email: ${_email.text} and name: ${_name.text}',
                                   );
                                   context.read<RegisterBloc>().add(
                                     RegisterSubmitted(
-                                      email: _email.text,
-                                      password: _password.text,
+                                      email: _email.text.trim(),
+                                      password: _password.text.trim(),
+                                      _name.text.trim(),
                                     ),
                                   );
                                 },
@@ -128,6 +152,7 @@ class _RegisterViewState extends State<RegisterView> {
                     );
                   },
                 ),
+
                 const SizedBox(height: 16),
                 Center(
                   child: TextButton(

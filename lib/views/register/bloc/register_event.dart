@@ -8,9 +8,9 @@ abstract class RegisterEvent extends Equatable {
 class RegisterSubmitted extends RegisterEvent {
   final String email;
   final String password;
-
-  RegisterSubmitted({required this.email, required this.password});
+  final String name;
+  RegisterSubmitted(this.name, {required this.email, required this.password});
 
   @override
-  List<Object?> get props => [email, password];
+  List<Object?> get props => [email, password, name];
 }

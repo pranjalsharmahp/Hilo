@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:hilo/crud/local_database_service.dart';
 import 'package:hilo/features/inbox/inbox_model.dart';
+import 'package:hilo/users/user.dart';
 import 'package:http/http.dart' as http;
 
 class InboxService {

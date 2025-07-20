@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hilo/crud/local_database_service.dart';
 import 'package:hilo/features/inbox/bloc/inbox_event.dart';
 import 'package:hilo/features/inbox/bloc/inbox_state.dart';
 import 'package:hilo/features/inbox/inbox_model.dart';
@@ -13,6 +14,16 @@ class InboxBloc extends Bloc<InboxEvent, InboxState> {
         final convos = await InboxService.loadConvosFromLocalDB(
           event.userEmail,
         );
+
+        final localDbService = LocalDatabaseService();
+
+        for (Conversation convo in convos) {
+          final otherUserName = await localDbService.getUserByEmail(
+            convo.otherUserEmail,
+          );
+          convo.otherUserName = otherUserName?['name'] ?? convo.otherUserEmail;
+        }
+
         emit(InboxLoaded(convos));
       } catch (e) {
         emit(InboxError(e.toString()));

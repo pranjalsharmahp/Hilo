@@ -1,14 +1,13 @@
 import 'dart:io';
 import 'package:hilo/features/chat/chat_service.dart';
 import 'package:hilo/features/inbox/inbox_service.dart';
+import 'package:hilo/socket/socket_service.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class LocalDatabaseService {
-  static final LocalDatabaseService _instance =
-      LocalDatabaseService._internal();
+  static final LocalDatabaseService _instance = LocalDatabaseService._internal();
   factory LocalDatabaseService() => _instance;
   static Database? _db;
 
@@ -50,6 +49,7 @@ class LocalDatabaseService {
         UNIQUE(user1_email, user2_email)
       )
     ''');
+
     await db.execute('''
       CREATE TABLE messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,8 +63,11 @@ class LocalDatabaseService {
     ''');
   }
 
+  // ===================== USERS =====================
   Future<int> insertUser(Map<String, dynamic> user) async {
     final db = await database;
+    user['created_at'] ??= DateTime.now().toIso8601String();
+    user['updated_at'] ??= DateTime.now().toIso8601String();
     return await db.insert(
       'users',
       user,
@@ -72,14 +75,84 @@ class LocalDatabaseService {
     );
   }
 
+  Future<String?> getProfileUrl(String email) async {
+    final db = await database;
+    final result = await db.query(
+      'users',
+      columns: ['profile_url'],
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+    if (result.isNotEmpty) {
+      final url = result.first['profile_url'];
+      if (url != null && url is String && url.isNotEmpty) {
+        return url;
+      }
+    }
+    return null;
+  }
+
+  Future<bool> updateProfileUrl(String email, String profileUrl) async {
+    final db = await database;
+    // Check if user exists
+    final user = await getUserByEmail(email);
+    if (user == null) {
+      // If not, insert user with email and profile_url
+      await insertUser({
+        'email': email,
+        'profile_url': profileUrl,
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      return true;
+    } else {
+      // If exists, just update
+      final result = await db.update(
+        'users',
+        {
+          'profile_url': profileUrl,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'email = ?',
+        whereArgs: [email],
+      );
+      return result > 0;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getUsers() async {
     final db = await database;
     return await db.query('users', orderBy: 'name ASC');
   }
 
+  Future<Map<String, dynamic>?> getUserByEmail(String email) async {
+    final db = await database;
+    final result = await db.query(
+      'users',
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  Future<int> updateUser(String email, Map<String, dynamic> updates) async {
+    final db = await database;
+    updates['updated_at'] = DateTime.now().toIso8601String();
+    return await db.update(
+      'users',
+      updates,
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+  }
+
+  // ===================== CONVERSATIONS =====================
   Future<int> upsertConversation(Map<String, dynamic> convo) async {
     final db = await database;
-    // Try update first
+    // Normalize emails to prevent duplicate combinations
+    final emails = [convo['user1_email'], convo['user2_email']]..sort();
+    convo['user1_email'] = emails[0];
+    convo['user2_email'] = emails[1];
     int count = await db.update(
       'conversations',
       convo,
@@ -95,22 +168,20 @@ class LocalDatabaseService {
   Future<List<Map<String, dynamic>>> getConversations(String email) async {
     final db = await database;
     const sql = '''
-    SELECT *,
-      CASE WHEN user1_email = ? THEN user2_email ELSE user1_email END AS other_user_email
-    FROM conversations
-    WHERE user1_email = ? OR user2_email = ?
-    ORDER BY last_updated DESC
-  ''';
-
-    // Use the email for all three bindings ($1, $2, $3 in your original) — in SQLite use ? as placeholders.
+      SELECT *,
+        CASE WHEN user1_email = ? THEN user2_email ELSE user1_email END AS other_user_email
+      FROM conversations
+      WHERE user1_email = ? OR user2_email = ?
+      ORDER BY last_updated DESC
+    ''';
     final result = await db.rawQuery(sql, [email, email, email]);
     return result;
   }
 
-  // MESSAGES CRUD
-
+  // ===================== MESSAGES =====================
   Future<int> insertMessage(Map<String, dynamic> msg) async {
     final db = await database;
+    msg['timestamp'] ??= DateTime.now().toIso8601String();
     return await db.insert('messages', msg);
   }
 
@@ -128,48 +199,83 @@ class LocalDatabaseService {
     );
   }
 
+  // ===================== INITIAL SYNC =====================
   Future<void> initialLocalSync(String currentUserEmail) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!(prefs.getBool('isDbInitialized') ?? false)) {
-      // Fetch all from backend
+    try {
       final remoteConvos = await InboxService.fetchConversations(
         currentUserEmail,
       );
-      for (final convo in remoteConvos) {
-        await LocalDatabaseService().upsertConversation({
-          'user1_email': convo.user1Email,
-          'user2_email': convo.user2Email,
-          'last_message': convo.lastMessage,
-          'last_sender_email': convo.lastSenderEmail,
-          'last_updated': convo.lastUpdated.toIso8601String(),
-        });
-      }
-      // Fetch all messages (backend endpoint must support this!)
-      final allOtherEmails =
-          remoteConvos
-              .map(
-                (c) =>
-                    c.user1Email == currentUserEmail
-                        ? c.user2Email
-                        : c.user1Email,
-              )
-              .toSet();
+      final db = await database;
 
-      for (final otherEmail in allOtherEmails) {
-        final remoteMessages = await ChatService.fetchMessages(
-          currentUserEmail,
-          otherEmail,
-        );
-        for (final msg in remoteMessages) {
-          await LocalDatabaseService().insertMessage({
-            'sender_email': msg.senderEmail,
-            'receiver_email': msg.receiverEmail,
-            'content': msg.content,
-            'timestamp': msg.timestamp,
-          });
+      // Insert/update conversations in a transaction
+      await db.transaction((txn) async {
+        for (final convo in remoteConvos) {
+          final emails = [convo.user1Email, convo.user2Email]..sort();
+          await txn.insert('conversations', {
+            'user1_email': emails[0],
+            'user2_email': emails[1],
+            'last_message': convo.lastMessage,
+            'last_sender_email': convo.lastSenderEmail,
+            'last_updated': convo.lastUpdated.toIso8601String(),
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      });
+
+      // Get all unique other users
+      final result = await db.rawQuery(
+        '''
+      SELECT DISTINCT 
+        CASE 
+          WHEN user1_email = ? THEN user2_email 
+          ELSE user1_email 
+        END AS other_user_email
+      FROM conversations
+      WHERE user1_email = ? OR user2_email = ?
+      ''',
+        [currentUserEmail, currentUserEmail, currentUserEmail],
+      );
+
+      final emailsToSync = result.map((row) => row['other_user_email'] as String).toList();
+      emailsToSync.add(currentUserEmail);
+
+      for (final email in emailsToSync) {
+        try {
+          final remoteUser = await SocketService.fetchUserByEmail(email);
+          if (remoteUser != null) {
+            await insertUser({
+              'email': remoteUser.email,
+              'name': remoteUser.name,
+              'profile_url': remoteUser.profilePictureUrl,
+              'bio': remoteUser.bio,
+            });
+          }
+        } catch (e) {
+          // Optionally report error
         }
       }
-      prefs.setBool('isDbInitialized', true);
+
+      // Sync all messages
+      final allOtherEmails = remoteConvos
+          .map((c) => c.user1Email == currentUserEmail ? c.user2Email : c.user1Email)
+          .toSet();
+
+      for (final otherEmail in allOtherEmails) {
+        try {
+          final remoteMessages = await ChatService.fetchMessages(currentUserEmail, otherEmail);
+          for (final msg in remoteMessages) {
+            await insertMessage({
+              'sender_email': msg.senderEmail,
+              'receiver_email': msg.receiverEmail,
+              'content': msg.content,
+              'timestamp': msg.timestamp,
+            });
+          }
+        } catch (e) {
+          // Optionally report error
+        }
+      }
+    } catch (e) {
+      // Optionally report error
     }
   }
 }

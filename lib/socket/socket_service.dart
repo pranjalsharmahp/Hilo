@@ -1,6 +1,7 @@
 // lib/socket/socket_service.dart
 import 'dart:convert';
 import 'package:hilo/crud/local_database_service.dart';
+import 'package:hilo/users/user.dart';
 import 'package:http/http.dart' as http;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -75,6 +76,49 @@ class SocketService {
     socket.onError((err) {
       print('General error: $err');
     });
+  }
+
+  Future<int> registerUser(String email, String name) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://hilo-backend-ozkp.onrender.com/users/register-user'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'name': name}),
+      );
+
+      if (response.statusCode == 201) {
+        print('User registered successfully');
+        return 201; // HTTP Created
+      } else if (response.statusCode == 409) {
+        print('Email already exists');
+        return 409; // Conflict
+      } else {
+        print('Failed to register user: ${response.body}');
+        return response.statusCode;
+      }
+    } catch (e) {
+      print('Error registering user: $e');
+      return 500; // Internal Server Error
+    }
+  }
+
+  static Future<User?> fetchUserByEmail(String email) async {
+    String baseUrl = 'https://hilo-backend-ozkp.onrender.com';
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/users/$email'));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        return User.fromJson(data);
+      } else {
+        print('Failed to fetch user: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching user: $e');
+      return null;
+    }
   }
 
   Future<void> sendMessage(

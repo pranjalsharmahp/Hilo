@@ -1,9 +1,11 @@
 // lib/socket/socket_service.dart
 import 'dart:convert';
+import 'package:hilo/crud/local_database_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class SocketService {
+  void Function(dynamic data)? onMessageReceived;
   // Singleton pattern
   static final SocketService _instance = SocketService._internal();
   factory SocketService() => _instance;
@@ -30,9 +32,35 @@ class SocketService {
       _connected = true;
     });
 
-    socket.on('messageReceived', (data) {
-      print('Message received: $data');
-      // Add event notification logic here (e.g., notify listeners)
+    socket.on('messageReceived', (data) async {
+      try {
+        print('TOP OF HANDLER'); // will always run
+
+        await LocalDatabaseService().insertMessage({
+          'sender_email': data['sender_email'],
+          'receiver_email': data['receiver_email'],
+          'content': data['content'],
+          'timestamp': data['timestamp'] ?? DateTime.now().toIso8601String(),
+        });
+        print('AFTER insertMessage');
+
+        await LocalDatabaseService().upsertConversation({
+          'user1_email': data['sender_email'],
+          'user2_email': data['receiver_email'],
+          'last_message': data['content'],
+          'last_sender_email': data['sender_email'],
+          'last_updated': data['timestamp'] ?? DateTime.now().toIso8601String(),
+        });
+        print('AFTER upsertConversation');
+
+        print('Message received: $data');
+        if (onMessageReceived != null) {
+          onMessageReceived!(data);
+        }
+      } catch (e, stack) {
+        print('!!! ERROR in messageReceived handler: $e');
+        print(stack);
+      }
     });
 
     socket.onDisconnect((_) {
@@ -81,6 +109,21 @@ class SocketService {
 
       if (response.statusCode == 201) {
         print('Conversation updated on backend.');
+        await LocalDatabaseService().insertMessage({
+          'sender_email': senderEmail,
+          'receiver_email': receiverEmail,
+          'content': message,
+          'timestamp': DateTime.now().toIso8601String(),
+          'isSeen': 1,
+          'type': 'TEXT',
+        });
+        await LocalDatabaseService().upsertConversation({
+          'user1_email': senderEmail, // or sorted by alpha for uniqness
+          'user2_email': receiverEmail,
+          'last_message': message,
+          'last_sender_email': senderEmail,
+          'last_updated': DateTime.now().toIso8601String(),
+        });
       } else {
         print('Failed to update conversation: ${response.body}');
       }

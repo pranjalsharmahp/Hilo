@@ -1,28 +1,25 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hilo/dialogs/error_dialog.dart';
-import 'package:hilo/features/inbox/bloc/inbox_bloc.dart';
-import 'package:hilo/features/inbox/bloc/inbox_event.dart';
 import 'dart:developer' as devtools;
 
-import 'package:hilo/views/inbox_view.dart';
-import 'package:hilo/views/login/bloc/login_bloc.dart';
-import 'package:hilo/views/login/bloc/login_event.dart';
-import 'package:hilo/views/login/bloc/login_state.dart';
-import 'package:hilo/views/login/register_view.dart';
+import 'package:hilo/views/login_view.dart';
+import 'package:hilo/views/register/bloc/register_bloc.dart';
+import 'package:hilo/views/register/bloc/register_event.dart';
+import 'package:hilo/views/register/bloc/register_state.dart';
 
-class LoginView extends StatefulWidget {
-  const LoginView({super.key});
+class RegisterView extends StatefulWidget {
+  const RegisterView({super.key});
 
   @override
-  State<LoginView> createState() => _LoginViewState();
+  State<RegisterView> createState() => _RegisterViewState();
 }
 
-class _LoginViewState extends State<LoginView> {
+class _RegisterViewState extends State<RegisterView> {
   late final TextEditingController _email;
   late final TextEditingController _password;
+
   @override
   void initState() {
     _email = TextEditingController();
@@ -41,17 +38,15 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      body: BlocListener<LoginBloc, LoginState>(
+      body: BlocListener<RegisterBloc, RegisterState>(
         listener: (context, state) async {
-          if (state is LoginLoading) {
+          if (state is RegisterLoading) {
             // Show loading indicator
-          } else if (state is LoginSuccess) {
+          } else if (state is RegisterSuccess) {
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => InboxView(userEmail: state.email),
-              ),
+              MaterialPageRoute(builder: (context) => LoginView()),
             );
-          } else if (state is LoginFailure) {
+          } else if (state is RegisterFailure) {
             await showErrorDialog(context, state.error);
           }
         },
@@ -63,7 +58,7 @@ class _LoginViewState extends State<LoginView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome Back',
+                  'Create Account',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -72,7 +67,7 @@ class _LoginViewState extends State<LoginView> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Please login to your account',
+                  'Register to get started',
                   style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 32),
@@ -100,49 +95,48 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final email = _email.text;
-                      final password = _password.text;
-                      try {
-                        context.read<LoginBloc>().add(
-                          LoginSubmitted(email: email, password: password),
-                        );
-                        context.read<InboxBloc>().add(LoadInbox(email));
-                      } on PlatformException catch (e) {
-                        devtools.log('Login error: $e');
-                        await showErrorDialog(
-                          context,
-                          'Login failed. Please try again.',
-                        );
-                      } catch (e) {
-                        devtools.log('Login error: $e');
-                        await showErrorDialog(
-                          context,
-                          'Login failed. Please try again.',
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text('Login', style: TextStyle(fontSize: 16)),
-                  ),
+                BlocBuilder<RegisterBloc, RegisterState>(
+                  builder: (context, state) {
+                    return SizedBox(
+                      width: double.infinity,
+                      child:
+                          state is RegisterLoading
+                              ? Center(child: CircularProgressIndicator())
+                              : ElevatedButton(
+                                onPressed: () {
+                                  devtools.log(
+                                    'Registering user with email: ${_email.text}',
+                                  );
+                                  context.read<RegisterBloc>().add(
+                                    RegisterSubmitted(
+                                      email: _email.text,
+                                      password: _password.text,
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Register',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 16),
                 Center(
                   child: TextButton(
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => RegisterView()),
+                        MaterialPageRoute(builder: (context) => LoginView()),
                       );
                     },
-                    child: Text('Don\'t have an account? Register'),
+                    child: Text('Already have an account? Login'),
                   ),
                 ),
               ],

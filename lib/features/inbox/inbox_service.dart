@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import 'package:hilo/inbox/inbox_model.dart';
+import 'package:hilo/crud/local_database_service.dart';
+import 'package:hilo/features/inbox/inbox_model.dart';
 import 'package:http/http.dart' as http;
 
 class InboxService {
@@ -16,5 +17,10 @@ class InboxService {
     } else {
       throw Exception('Failed to load conversations');
     }
+  }
+
+  static Future<List<Conversation>> loadConvosFromLocalDB(String email) async {
+    final data = await LocalDatabaseService().getConversations(email);
+    return data.map((row) => Conversation.fromJson(row)).toList();
   }
 }

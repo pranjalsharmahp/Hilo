@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hilo/dialogs/error_dialog.dart';
 import 'package:hilo/socket/socket_service.dart';
+import 'package:hilo/users/user.dart';
 
 void showAddConversationDialog(
   BuildContext context,
@@ -44,9 +46,16 @@ void showAddConversationDialog(
           TextButton(
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
-                // Call the service to add the conversation
-                // For example:
-                // InboxService.addConversation(currentUserEmail, _otherUserEmail, message);
+                User? otherUser = await SocketService.fetchUserByEmail(
+                  _otherUserEmail,
+                );
+                if (otherUser == null) {
+                  await showErrorDialog(
+                    context,
+                    'User not found! Ask your friend to register on Hilo',
+                  );
+                  return;
+                }
                 await SocketService().sendMessage(
                   currentUserEmail,
                   _otherUserEmail,

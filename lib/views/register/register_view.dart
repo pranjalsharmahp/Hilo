@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hilo/dialogs/error_dialog.dart';
 import 'dart:developer' as devtools;
 
-import 'package:hilo/views/login/bloc/login_view.dart';
+import 'package:hilo/views/login/login_view.dart';
 import 'package:hilo/views/register/bloc/register_bloc.dart';
 import 'package:hilo/views/register/bloc/register_event.dart';
 import 'package:hilo/views/register/bloc/register_state.dart';

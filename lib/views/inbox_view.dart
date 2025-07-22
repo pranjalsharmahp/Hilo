@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hilo/dialogs/add_conversation_dialog.dart';
+import 'package:hilo/features/auth/bloc/auth_bloc.dart';
+import 'package:hilo/features/auth/bloc/auth_event.dart';
 import 'package:hilo/features/inbox/bloc/inbox_bloc.dart';
 import 'package:hilo/features/inbox/bloc/inbox_event.dart';
 import 'package:hilo/features/inbox/bloc/inbox_state.dart';
@@ -9,7 +11,7 @@ import 'package:hilo/features/inbox/bloc/inbox_state.dart';
 import 'package:hilo/features/inbox/inbox_model.dart';
 import 'package:hilo/socket/socket_service.dart';
 import 'package:hilo/views/chat_view.dart';
-import 'package:hilo/views/login/bloc/login_view.dart';
+import 'package:hilo/views/login/login_view.dart';
 
 class InboxScreen extends StatelessWidget {
   final String userEmail;
@@ -44,7 +46,7 @@ class InboxView extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: () {
-              context.read<InboxBloc>().add(SignOut());
+              context.read<AuthBloc>().add(const AuthEventLogOut());
             },
           ),
         ],
@@ -73,11 +75,6 @@ class InboxView extends StatelessWidget {
               context.read<InboxBloc>().add(LoadInbox(userEmail));
             }
           }
-          if (state is SignOutState) {
-            Navigator.of(
-              context,
-            ).pushReplacement(MaterialPageRoute(builder: (_) => LoginView()));
-          }
         },
         child: BlocBuilder<InboxBloc, InboxState>(
           builder: (context, state) {
@@ -89,12 +86,13 @@ class InboxView extends StatelessWidget {
             }
             if (state is InboxLoaded) {
               final conversations = state.conversations;
+              final users = state.users;
               return ListView.builder(
                 padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 itemCount: conversations.length,
                 itemBuilder: (context, index) {
                   final convo = conversations[index];
-
+                  final user = users[index];
                   final isSentByUser = convo.lastSenderEmail == userEmail;
                   return InkWell(
                     onTap: () {
@@ -122,6 +120,10 @@ class InboxView extends StatelessWidget {
                           CircleAvatar(
                             radius: 25,
                             backgroundColor: Colors.grey[300],
+                            backgroundImage:
+                                users[index].profilePictureUrl != null
+                                    ? NetworkImage(user.profilePictureUrl!)
+                                    : null,
                             child: Text(
                               convo.otherUserEmail[0].toUpperCase(),
                               style: TextStyle(

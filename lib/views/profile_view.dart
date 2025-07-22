@@ -37,6 +37,7 @@ class _ProfileViewState extends State<ProfileView> {
 
   Future<void> _loadProfileImage() async {
     print('Loading profile image for ${widget.email}');
+
     final profileUrl = await LocalDatabaseService().getProfileUrl(widget.email);
     if (profileUrl != null && profileUrl.isNotEmpty) {
       setState(() {

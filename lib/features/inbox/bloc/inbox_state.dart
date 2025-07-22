@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:hilo/features/inbox/inbox_model.dart';
+import 'package:hilo/users/user.dart';
 
 abstract class InboxState extends Equatable {
   @override
@@ -13,10 +14,12 @@ class InboxLoading extends InboxState {}
 class InboxLoaded extends InboxState {
   final List<Conversation> conversations;
 
-  InboxLoaded(this.conversations);
+  final List<User> users;
+
+  InboxLoaded(this.conversations, this.users);
 
   @override
-  List<Object?> get props => [conversations];
+  List<Object?> get props => [conversations, users];
 }
 
 class InboxError extends InboxState {
@@ -28,6 +31,8 @@ class InboxError extends InboxState {
   List<Object?> get props => [error];
 }
 
+class InboxUninitialized extends InboxState {}
+
 class ConversationSelected extends InboxState {
   final Conversation conversation;
 
@@ -35,9 +40,4 @@ class ConversationSelected extends InboxState {
 
   @override
   List<Object?> get props => [conversation];
-}
-
-class SignOutState extends InboxState {
-  @override
-  List<Object?> get props => [];
 }

@@ -2,12 +2,14 @@ import 'dart:io';
 import 'package:hilo/features/chat/chat_service.dart';
 import 'package:hilo/features/inbox/inbox_service.dart';
 import 'package:hilo/socket/socket_service.dart';
+import 'package:hilo/users/user.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class LocalDatabaseService {
-  static final LocalDatabaseService _instance = LocalDatabaseService._internal();
+  static final LocalDatabaseService _instance =
+      LocalDatabaseService._internal();
   factory LocalDatabaseService() => _instance;
   static Database? _db;
 
@@ -75,8 +77,21 @@ class LocalDatabaseService {
     );
   }
 
-  Future<String?> getProfileUrl(String email) async {
+  Future<void> deleteDatabse() async {
     final db = await database;
+    await db.close();
+    final documentsDirectory = await getApplicationDocumentsDirectory();
+    final path = join(documentsDirectory.path, "local_chat.db");
+    if (await File(path).exists()) {
+      await File(path).delete();
+    }
+  }
+
+  Future<String?> getProfileUrl(String email) async {
+    print('Fetching profile URL for $email');
+    final db = await database;
+    final usersTable = await db.query('users');
+    print('Current users table: $usersTable');
     final result = await db.query(
       'users',
       columns: ['profile_url'],
@@ -90,6 +105,13 @@ class LocalDatabaseService {
       }
     }
     return null;
+  }
+
+  Future<List<User>> getAllUsers() async {
+    final db = await database;
+    final result = await db.query('users');
+
+    return result.map((e) => User.fromJson(e)).toList();
   }
 
   Future<bool> updateProfileUrl(String email, String profileUrl) async {
@@ -125,14 +147,19 @@ class LocalDatabaseService {
     return await db.query('users', orderBy: 'name ASC');
   }
 
-  Future<Map<String, dynamic>?> getUserByEmail(String email) async {
+  Future<User?> getUserByEmail(String email) async {
     final db = await database;
     final result = await db.query(
       'users',
       where: 'email = ?',
       whereArgs: [email],
     );
-    return result.isNotEmpty ? result.first : null;
+
+    if (result.isNotEmpty) {
+      // Use fromJson (which works for both API and DB, since your keys match)
+      return User.fromJson(result.first);
+    }
+    return null;
   }
 
   Future<int> updateUser(String email, Map<String, dynamic> updates) async {
@@ -235,8 +262,10 @@ class LocalDatabaseService {
         [currentUserEmail, currentUserEmail, currentUserEmail],
       );
 
-      final emailsToSync = result.map((row) => row['other_user_email'] as String).toList();
+      final emailsToSync =
+          result.map((row) => row['other_user_email'] as String).toList();
       emailsToSync.add(currentUserEmail);
+      print('Emails to sync: $emailsToSync');
 
       for (final email in emailsToSync) {
         try {
@@ -255,13 +284,22 @@ class LocalDatabaseService {
       }
 
       // Sync all messages
-      final allOtherEmails = remoteConvos
-          .map((c) => c.user1Email == currentUserEmail ? c.user2Email : c.user1Email)
-          .toSet();
+      final allOtherEmails =
+          remoteConvos
+              .map(
+                (c) =>
+                    c.user1Email == currentUserEmail
+                        ? c.user2Email
+                        : c.user1Email,
+              )
+              .toSet();
 
       for (final otherEmail in allOtherEmails) {
         try {
-          final remoteMessages = await ChatService.fetchMessages(currentUserEmail, otherEmail);
+          final remoteMessages = await ChatService.fetchMessages(
+            currentUserEmail,
+            otherEmail,
+          );
           for (final msg in remoteMessages) {
             await insertMessage({
               'sender_email': msg.senderEmail,

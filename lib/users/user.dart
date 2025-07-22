@@ -11,7 +11,7 @@ class User {
     required this.name,
   });
   factory User.fromJson(Map<String, dynamic> json) {
-    final profilePictureUrl = json['profile_picture_url'] ?? '';
+    final profilePictureUrl = json['profile_url'] ?? '';
     final bio = json['bio'] ?? '';
 
     return User(

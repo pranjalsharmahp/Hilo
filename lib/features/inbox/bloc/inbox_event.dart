@@ -24,7 +24,11 @@ class SelectConversation extends InboxEvent {
   List<Object?> get props => [conversation];
 }
 
-class SignOut extends InboxEvent {
+class InitializeInbox extends InboxEvent {
+  final String userEmail;
+
+  InitializeInbox(this.userEmail);
+
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [userEmail];
 }

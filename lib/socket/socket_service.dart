@@ -1,9 +1,11 @@
 // lib/socket/socket_service.dart
 import 'dart:convert';
 import 'package:hilo/crud/local_database_service.dart';
+import 'package:hilo/person.dart';
 import 'package:hilo/users/user.dart';
 import 'package:http/http.dart' as http;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:uuid/uuid.dart';
 
 class SocketService {
   void Function(dynamic data)? onMessageReceived;
@@ -42,6 +44,7 @@ class SocketService {
           'receiver_email': data['receiver_email'],
           'content': data['content'],
           'timestamp': data['timestamp'] ?? DateTime.now().toIso8601String(),
+          'message_id': data['message_id'],
         });
         print('AFTER insertMessage');
 
@@ -102,7 +105,7 @@ class SocketService {
     }
   }
 
-  static Future<User?> fetchUserByEmail(String email) async {
+  static Future<Person?> fetchUserByEmail(String email) async {
     String baseUrl = 'https://hilo-backend-ozkp.onrender.com';
     try {
       final response = await http.get(Uri.parse('$baseUrl/users/$email'));
@@ -110,7 +113,7 @@ class SocketService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        return User.fromJson(data);
+        return Person.fromJson(data);
       } else {
         print('Failed to fetch user: ${response.statusCode}');
         return null;
@@ -130,11 +133,14 @@ class SocketService {
       print('Socket is not connected yet.');
       return;
     }
+    var uuid = Uuid();
+    String messageId = uuid.v4();
 
     socket.emit('sendMessage', {
       'sender_email': senderEmail,
       'receiver_email': receiverEmail,
       'content': message,
+      'message_id': messageId,
     });
 
     print('Socket message emit sent.');
@@ -154,11 +160,12 @@ class SocketService {
       if (response.statusCode == 201) {
         print('Conversation updated on backend.');
         await LocalDatabaseService().insertMessage({
+          'message_id': messageId,
           'sender_email': senderEmail,
           'receiver_email': receiverEmail,
           'content': message,
           'timestamp': DateTime.now().toIso8601String(),
-          'isSeen': 1,
+          'is_seen': 1,
           'type': 'TEXT',
         });
         await LocalDatabaseService().upsertConversation({

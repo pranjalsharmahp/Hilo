@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hilo/crud/local_database_service.dart';
 import 'package:hilo/features/chat/chat_bloc.dart';
 import 'package:hilo/features/chat/chat_event.dart';
 import 'package:hilo/features/chat/chat_model.dart';
@@ -23,6 +24,7 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   final TextEditingController _controller = TextEditingController();
   late ChatBloc _chatBloc;
+  String? otherProfileUrl; // Don't use late; assign during fetch.
 
   @override
   void initState() {
@@ -34,6 +36,7 @@ class _ChatViewState extends State<ChatView> {
         user2: widget.otherUserEmail,
       ),
     );
+    _loadProfileUrl(); // Fetch the other user's profile photo URL.
 
     SocketService().onMessageReceived = (data) {
       final msg = Message.fromJson(data);
@@ -51,6 +54,15 @@ class _ChatViewState extends State<ChatView> {
         );
       }
     };
+  }
+
+  Future<void> _loadProfileUrl() async {
+    final url = await LocalDatabaseService().getProfileUrl(
+      widget.otherUserEmail,
+    );
+    setState(() {
+      otherProfileUrl = url;
+    });
   }
 
   @override
@@ -90,9 +102,16 @@ class _ChatViewState extends State<ChatView> {
           appBar: AppBar(
             title: Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   backgroundColor: Colors.grey,
-                  child: Icon(Icons.person, color: Colors.white),
+                  backgroundImage:
+                      otherProfileUrl != null && otherProfileUrl!.isNotEmpty
+                          ? NetworkImage(otherProfileUrl!)
+                          : null,
+                  child:
+                      (otherProfileUrl == null || otherProfileUrl!.isEmpty)
+                          ? const Icon(Icons.person, color: Colors.white)
+                          : null,
                 ),
                 const SizedBox(width: 10),
                 Text(

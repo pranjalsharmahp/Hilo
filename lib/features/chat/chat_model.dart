@@ -3,8 +3,10 @@ class Message {
   final String receiverEmail;
   final String content;
   final String timestamp;
+  final String messageId;
 
   Message({
+    required this.messageId,
     required this.senderEmail,
     required this.receiverEmail,
     required this.content,
@@ -16,6 +18,7 @@ class Message {
       senderEmail: json['sender_email'],
       receiverEmail: json['receiver_email'],
       content: json['content'],
+      messageId: json['message_id'],
       timestamp: json['timestamp'] ?? DateTime.now().toIso8601String(),
     );
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hilo/crud/local_database_service.dart';
 import 'package:hilo/dialogs/error_dialog.dart';
+import 'package:hilo/person.dart';
 import 'package:hilo/socket/socket_service.dart';
 import 'package:hilo/users/user.dart';
 
@@ -46,7 +48,7 @@ void showAddConversationDialog(
           TextButton(
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
-                User? otherUser = await SocketService.fetchUserByEmail(
+                Person? otherUser = await SocketService.fetchUserByEmail(
                   _otherUserEmail,
                 );
                 if (otherUser == null) {
@@ -56,6 +58,12 @@ void showAddConversationDialog(
                   );
                   return;
                 }
+                LocalDatabaseService().insertUser({
+                  'email': otherUser.email,
+                  'name': otherUser.name,
+                  'profile_url': otherUser.profilePictureUrl,
+                  'bio': otherUser.bio,
+                });
                 await SocketService().sendMessage(
                   currentUserEmail,
                   _otherUserEmail,

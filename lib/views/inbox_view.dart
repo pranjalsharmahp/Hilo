@@ -30,9 +30,30 @@ class InboxScreen extends StatelessWidget {
   }
 }
 
-class InboxView extends StatelessWidget {
+class InboxView extends StatefulWidget {
   final String userEmail;
   const InboxView({super.key, required this.userEmail});
+
+  @override
+  State<InboxView> createState() => _InboxViewState();
+}
+
+class _InboxViewState extends State<InboxView> {
+  @override
+  void initState() {
+    super.initState();
+    SocketService().onMessageReceived = (data) async {
+      final otherUserEmail = data['sender_email'];
+      final userData = await SocketService.fetchUserByEmail(otherUserEmail);
+      LocalDatabaseService().insertUser({
+        'email': userData!.email,
+        'name': userData.name,
+        'profile_url': userData.profilePictureUrl,
+        'bio': userData.bio,
+      });
+      context.read<InboxBloc>().add(LoadInbox(data['receiver_email']));
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,8 +93,8 @@ class InboxView extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          showAddConversationDialog(context, userEmail, () {
-            context.read<InboxBloc>().add(LoadInbox(userEmail));
+          showAddConversationDialog(context, widget.userEmail, () {
+            context.read<InboxBloc>().add(LoadInbox(widget.userEmail));
           });
         },
         backgroundColor: Colors.white,
@@ -86,14 +107,14 @@ class InboxView extends StatelessWidget {
               MaterialPageRoute(
                 builder:
                     (context) => ChatView(
-                      currentUserEmail: userEmail,
+                      currentUserEmail: widget.userEmail,
                       otherUserEmail: state.conversation.otherUserEmail,
                     ),
               ),
             );
 
             if (result == true) {
-              context.read<InboxBloc>().add(LoadInbox(userEmail));
+              context.read<InboxBloc>().add(LoadInbox(widget.userEmail));
             }
           }
         },
@@ -127,7 +148,8 @@ class InboxView extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final convo = conversations[index];
                   final user = users[index];
-                  final isSentByUser = convo.lastSenderEmail == userEmail;
+                  final isSentByUser =
+                      convo.lastSenderEmail == widget.userEmail;
 
                   return GestureDetector(
                     onTap: () {

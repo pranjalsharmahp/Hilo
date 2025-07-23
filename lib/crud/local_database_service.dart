@@ -55,12 +55,12 @@ class LocalDatabaseService {
 
     await db.execute('''
       CREATE TABLE messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_id TEXT PRIMARY KEY,
         sender_email TEXT NOT NULL,
         receiver_email TEXT NOT NULL,
         content TEXT NOT NULL,
         type TEXT DEFAULT 'TEXT',
-        isSeen INTEGER NOT NULL DEFAULT 0,
+        is_seen INTEGER NOT NULL DEFAULT 0,
         timestamp TEXT NOT NULL
       )
     ''');
@@ -210,7 +210,11 @@ class LocalDatabaseService {
   Future<int> insertMessage(Map<String, dynamic> msg) async {
     final db = await database;
     msg['timestamp'] ??= DateTime.now().toIso8601String();
-    return await db.insert('messages', msg);
+    return await db.insert(
+      'messages',
+      msg,
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getMessages(
@@ -303,6 +307,7 @@ class LocalDatabaseService {
           );
           for (final msg in remoteMessages) {
             await insertMessage({
+              'message_id': msg.messageId,
               'sender_email': msg.senderEmail,
               'receiver_email': msg.receiverEmail,
               'content': msg.content,

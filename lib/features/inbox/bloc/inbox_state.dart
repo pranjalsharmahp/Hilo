@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:hilo/features/inbox/inbox_model.dart';
+import 'package:hilo/person.dart';
 import 'package:hilo/users/user.dart';
 
 abstract class InboxState extends Equatable {
@@ -29,6 +30,14 @@ class InboxError extends InboxState {
 
   @override
   List<Object?> get props => [error];
+}
+
+class LoadProfileState extends InboxState {
+  final Person user;
+
+  LoadProfileState(this.user);
+  @override
+  List<Object?> get props => [user];
 }
 
 class InboxUninitialized extends InboxState {}

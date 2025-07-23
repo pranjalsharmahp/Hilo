@@ -37,6 +37,10 @@ class InboxBloc extends Bloc<InboxEvent, InboxState> {
         emit(InboxError(e.toString()));
       }
     });
+
+    on<LoadProfile>((event, emit) {
+      emit(LoadProfileState(event.user));
+    });
     on<SelectConversation>((event, emit) {
       emit(ConversationSelected(event.conversation));
       // After this, you may choose to emit InboxLoaded again to "reset" the state if needed

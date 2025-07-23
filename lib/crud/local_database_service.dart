@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:hilo/features/chat/chat_service.dart';
 import 'package:hilo/features/inbox/inbox_service.dart';
+import 'package:hilo/person.dart';
 import 'package:hilo/socket/socket_service.dart';
 import 'package:hilo/users/user.dart';
 import 'package:path_provider/path_provider.dart';
@@ -147,7 +148,7 @@ class LocalDatabaseService {
     return await db.query('users', orderBy: 'name ASC');
   }
 
-  Future<User?> getUserByEmail(String email) async {
+  Future<Person?> getUserByEmail(String email) async {
     final db = await database;
     final result = await db.query(
       'users',
@@ -157,7 +158,7 @@ class LocalDatabaseService {
 
     if (result.isNotEmpty) {
       // Use fromJson (which works for both API and DB, since your keys match)
-      return User.fromJson(result.first);
+      return Person.fromJson(result.first);
     }
     return null;
   }

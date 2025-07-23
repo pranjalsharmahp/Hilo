@@ -23,6 +23,10 @@ class AuthStateLoggedIn extends AuthState {
   const AuthStateLoggedIn(this.user);
 }
 
+class AuthStateNeedsRegistering extends AuthState {
+  const AuthStateNeedsRegistering();
+}
+
 class AuthStateNeedsVerification extends AuthState {
   const AuthStateNeedsVerification();
 }

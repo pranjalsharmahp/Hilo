@@ -11,6 +11,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await provider.sendEmailVerification();
         emit(state);
       });
+      on<AuthEventShouldRegister>((event, emit) {
+        emit(AuthStateNeedsRegistering());
+      });
 
       //register
       on<AuthEventRegister>((event, emit) async {
@@ -59,6 +62,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await provider.logOut();
         emit(const AuthStateLoggedOut(exception: null));
       } on Exception catch (e) {
+        print(e.toString());
         emit(AuthStateLoggedOut(exception: e));
       }
     });

@@ -5,6 +5,7 @@ import 'package:hilo/features/inbox/bloc/inbox_event.dart';
 import 'package:hilo/features/inbox/bloc/inbox_state.dart';
 import 'package:hilo/features/inbox/inbox_model.dart';
 import 'package:hilo/features/inbox/inbox_service.dart';
+import 'package:hilo/person.dart';
 import 'package:hilo/socket/socket_service.dart';
 
 class InboxBloc extends Bloc<InboxEvent, InboxState> {
@@ -23,14 +24,14 @@ class InboxBloc extends Bloc<InboxEvent, InboxState> {
         );
 
         final localDbService = LocalDatabaseService();
-
+        List<Person> users = [];
         for (Conversation convo in convos) {
           final user = await localDbService.getUserByEmail(
             convo.otherUserEmail,
           );
+          users.add(user!);
           convo.otherUserName = user?.name ?? convo.otherUserEmail;
         }
-        final users = await localDbService.getAllUsers();
 
         emit(InboxLoaded(convos, users));
       } catch (e) {

@@ -1,7 +1,9 @@
 import 'package:bloc/bloc.dart';
+import 'package:hilo/features/auth/auth_exceptions.dart';
 import 'package:hilo/features/auth/auth_provider.dart';
 import 'package:hilo/features/auth/bloc/auth_event.dart';
 import 'package:hilo/features/auth/bloc/auth_state.dart';
+import 'package:hilo/socket/socket_service.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc(AuthProvider provider) : super(const AuthStateUninitialized()) {
@@ -22,6 +24,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         try {
           await provider.register(email: email, password: password);
           await provider.sendEmailVerification();
+          final statusCode = await SocketService().registerUser(
+            event.email,
+
+            event.name,
+          );
+          if (statusCode == 201) {
+            emit(AuthStateNeedsVerification());
+          } else if (statusCode == 409) {
+            emit(AuthStateRegistering(FailedToRegisterToDatabase()));
+          } else {
+            emit(AuthStateRegistering(FailedToRegisterToDatabase()));
+          }
           emit(const AuthStateNeedsVerification());
         } on Exception catch (e) {
           emit(AuthStateRegistering(e));
@@ -46,8 +60,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       try {
         final user = await provider.logIn(email: email, password: password);
         if (!user!.isEmailVerified) {
-          emit(const AuthStateLoggedOut(exception: null));
           emit(const AuthStateNeedsVerification());
+          emit(const AuthStateLoggedOut(exception: null));
         } else {
           emit(const AuthStateLoggedOut(exception: null));
           emit(AuthStateLoggedIn(user));

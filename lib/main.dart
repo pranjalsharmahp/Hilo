@@ -10,6 +10,7 @@ import 'package:hilo/features/auth/firebase_auth_provider.dart';
 import 'package:hilo/features/inbox/bloc/inbox_bloc.dart';
 import 'package:hilo/features/inbox/bloc/inbox_event.dart';
 import 'package:hilo/features/inbox/bloc/inbox_state.dart';
+import 'package:hilo/testing.dart';
 import 'package:hilo/views/chat_view.dart';
 import 'package:hilo/socket/socket_service.dart';
 import 'package:hilo/views/email_verification_view.dart';
@@ -53,6 +54,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     context.read<AuthBloc>().add(const AuthEventInitialize());
+
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is AuthStateLoggedIn) {

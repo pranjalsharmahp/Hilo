@@ -98,8 +98,9 @@ class _RegisterViewState extends State<RegisterView> {
                                 : () {
                                   final email = _email.text.trim();
                                   final password = _password.text.trim();
+                                  final name = _name.text.trim();
                                   context.read<AuthBloc>().add(
-                                    AuthEventRegister(email, password),
+                                    AuthEventRegister(email, password, name),
                                   );
                                 },
                         style: ElevatedButton.styleFrom(

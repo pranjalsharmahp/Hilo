@@ -108,11 +108,11 @@ class LocalDatabaseService {
     return null;
   }
 
-  Future<List<User>> getAllUsers() async {
+  Future<List<Person>> getAllUsers() async {
     final db = await database;
     final result = await db.query('users');
 
-    return result.map((e) => User.fromJson(e)).toList();
+    return result.map((e) => Person.fromJson(e)).toList();
   }
 
   Future<bool> updateProfileUrl(String email, String profileUrl) async {
@@ -315,6 +315,18 @@ class LocalDatabaseService {
       }
     } catch (e) {
       // Optionally report error
+    }
+  }
+
+  Future<void> deleteAllData() async {
+    final db = await database;
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';",
+    );
+
+    for (final table in tables) {
+      final tableName = table['name'];
+      await db.delete(tableName! as String); // deletes all rows, NOT the tables
     }
   }
 }

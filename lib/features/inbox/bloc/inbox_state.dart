@@ -15,7 +15,7 @@ class InboxLoading extends InboxState {}
 class InboxLoaded extends InboxState {
   final List<Conversation> conversations;
 
-  final List<User> users;
+  final List<Person> users;
 
   InboxLoaded(this.conversations, this.users);
 

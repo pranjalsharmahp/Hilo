@@ -1,13 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hilo/dialogs/error_dialog.dart';
-import 'dart:developer' as devtools;
-
-import 'package:hilo/views/login/bloc/login_view.dart';
-import 'package:hilo/views/register/bloc/register_bloc.dart';
-import 'package:hilo/views/register/bloc/register_event.dart';
-import 'package:hilo/views/register/bloc/register_state.dart';
+import 'package:hilo/views/login/login_view.dart';
+import 'package:hilo/features/auth/bloc/auth_bloc.dart';
+import 'package:hilo/features/auth/bloc/auth_event.dart';
+import 'package:hilo/features/auth/bloc/auth_state.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -41,16 +38,18 @@ class _RegisterViewState extends State<RegisterView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      body: BlocListener<RegisterBloc, RegisterState>(
+      body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) async {
-          if (state is RegisterLoading) {
-            // Show loading indicator
-          } else if (state is RegisterSuccess) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => LoginView()),
+          if (state is AuthStateRegistering && state.exception != null) {
+            await showErrorDialog(
+              context,
+              'Failed to register: ${state.exception}',
             );
-          } else if (state is RegisterFailure) {
-            await showErrorDialog(context, state.error);
+          } else if (state is AuthStateNeedsVerification) {
+            // Navigate after registration success
+            context.read<AuthBloc>().add(
+              const AuthEventSendEmailVerification(),
+            );
           }
         },
         child: Center(
@@ -62,93 +61,62 @@ class _RegisterViewState extends State<RegisterView> {
               children: [
                 Text(
                   'Create Account',
-                  style: TextStyle(
-                    fontSize: 28,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Register to get started',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 32),
 
-                // Name Field
-                TextField(
-                  controller: _name,
-                  decoration: InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  keyboardType: TextInputType.name,
-                ),
+                _buildTextField(_name, 'Full Name', Icons.person_outline),
                 const SizedBox(height: 16),
-
-                // Email Field
-                TextField(
-                  controller: _email,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                ),
+                _buildTextField(_email, 'Email', Icons.email_outlined),
                 const SizedBox(height: 16),
-
-                // Password Field
-                TextField(
-                  controller: _password,
+                _buildTextField(
+                  _password,
+                  'Password',
+                  Icons.lock_outline,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: Icon(Icons.lock_outline),
-                  ),
                 ),
                 const SizedBox(height: 24),
 
-                // Register Button
-                BlocBuilder<RegisterBloc, RegisterState>(
+                BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, state) {
+                    final isLoading = state is AuthStateRegistering;
                     return SizedBox(
                       width: double.infinity,
-                      child:
-                          state is RegisterLoading
-                              ? Center(child: CircularProgressIndicator())
-                              : ElevatedButton(
-                                onPressed: () {
-                                  devtools.log(
-                                    'Registering user with email: ${_email.text} and name: ${_name.text}',
-                                  );
-                                  context.read<RegisterBloc>().add(
-                                    RegisterSubmitted(
-                                      email: _email.text.trim(),
-                                      password: _password.text.trim(),
-                                      _name.text.trim(),
-                                    ),
+                      child: ElevatedButton(
+                        onPressed:
+                            isLoading
+                                ? null
+                                : () {
+                                  final email = _email.text.trim();
+                                  final password = _password.text.trim();
+                                  context.read<AuthBloc>().add(
+                                    AuthEventRegister(email, password),
                                   );
                                 },
-                                style: ElevatedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child:
+                            isLoading
+                                ? const CircularProgressIndicator.adaptive()
+                                : const Text(
                                   'Register',
                                   style: TextStyle(fontSize: 16),
                                 ),
-                              ),
+                      ),
                     );
                   },
                 ),
@@ -157,16 +125,38 @@ class _RegisterViewState extends State<RegisterView> {
                 Center(
                   child: TextButton(
                     onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => LoginView()),
-                      );
+                      context.read<AuthBloc>().add(const AuthEventLogOut());
                     },
-                    child: Text('Already have an account? Login'),
+                    child: const Text(
+                      'Already have an account? Login',
+                      style: TextStyle(fontSize: 14),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool obscureText = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 16,
         ),
       ),
     );

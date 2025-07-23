@@ -9,6 +9,7 @@ import 'package:hilo/socket/socket_service.dart';
 class ChatView extends StatefulWidget {
   final String currentUserEmail;
   final String otherUserEmail;
+
   const ChatView({
     super.key,
     required this.currentUserEmail,
@@ -33,12 +34,15 @@ class _ChatViewState extends State<ChatView> {
         user2: widget.otherUserEmail,
       ),
     );
+
     SocketService().onMessageReceived = (data) {
       final msg = Message.fromJson(data);
-      if ((msg.senderEmail == widget.currentUserEmail &&
+      final shouldReload =
+          (msg.senderEmail == widget.currentUserEmail &&
               msg.receiverEmail == widget.otherUserEmail) ||
           (msg.senderEmail == widget.otherUserEmail &&
-              msg.receiverEmail == widget.currentUserEmail)) {
+              msg.receiverEmail == widget.currentUserEmail);
+      if (shouldReload) {
         _chatBloc.add(
           LoadMessages(
             user1: widget.currentUserEmail,
@@ -82,9 +86,22 @@ class _ChatViewState extends State<ChatView> {
           }
         },
         child: Scaffold(
+          backgroundColor: const Color(0xFFF9F9F9),
           appBar: AppBar(
-            title: Text(widget.otherUserEmail),
-            elevation: 1,
+            title: Row(
+              children: [
+                const CircleAvatar(
+                  backgroundColor: Colors.grey,
+                  child: Icon(Icons.person, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  widget.otherUserEmail,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            elevation: 0.5,
             backgroundColor: Colors.white,
             foregroundColor: Colors.black87,
           ),
@@ -94,12 +111,16 @@ class _ChatViewState extends State<ChatView> {
                 child: BlocBuilder<ChatBloc, ChatState>(
                   builder: (context, state) {
                     if (state is ChatLoading) {
-                      return Center(child: CircularProgressIndicator());
+                      return const Center(child: CircularProgressIndicator());
                     }
                     if (state is ChatLoaded) {
                       final messages = state.messages;
                       return ListView.builder(
                         reverse: true,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 12,
+                        ),
                         itemCount: messages.length,
                         itemBuilder: (context, index) {
                           final msg = messages[messages.length - 1 - index];
@@ -111,10 +132,7 @@ class _ChatViewState extends State<ChatView> {
                                     ? Alignment.centerRight
                                     : Alignment.centerLeft,
                             child: Container(
-                              margin: const EdgeInsets.symmetric(
-                                vertical: 6,
-                                horizontal: 12,
-                              ),
+                              margin: const EdgeInsets.symmetric(vertical: 6),
                               padding: const EdgeInsets.symmetric(
                                 vertical: 10,
                                 horizontal: 14,
@@ -125,13 +143,26 @@ class _ChatViewState extends State<ChatView> {
                               ),
                               decoration: BoxDecoration(
                                 color:
-                                    isMe ? Colors.blue[200] : Colors.grey[200],
-                                borderRadius: BorderRadius.circular(16),
+                                    isMe
+                                        ? Colors.blueAccent.withOpacity(0.2)
+                                        : Colors.white,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(16),
+                                  topRight: const Radius.circular(16),
+                                  bottomLeft:
+                                      isMe
+                                          ? const Radius.circular(16)
+                                          : const Radius.circular(0),
+                                  bottomRight:
+                                      isMe
+                                          ? const Radius.circular(0)
+                                          : const Radius.circular(16),
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black12,
                                     blurRadius: 4,
-                                    offset: Offset(0, 2),
+                                    offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
@@ -143,27 +174,27 @@ class _ChatViewState extends State<ChatView> {
                                 children: [
                                   Text(
                                     msg.content,
-                                    style: TextStyle(
-                                      fontSize: 16,
+                                    style: const TextStyle(
+                                      fontSize: 15,
                                       color: Colors.black87,
                                     ),
                                   ),
-                                  SizedBox(height: 4),
+                                  const SizedBox(height: 4),
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
                                         msg.timestamp.substring(11, 16),
                                         style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey[700],
+                                          fontSize: 11,
+                                          color: Colors.grey[600],
                                         ),
                                       ),
                                       if (isMe) ...[
-                                        SizedBox(width: 4),
-                                        Icon(
+                                        const SizedBox(width: 4),
+                                        const Icon(
                                           Icons.check,
-                                          size: 12,
+                                          size: 14,
                                           color: Colors.blueGrey,
                                         ),
                                       ],
@@ -179,19 +210,19 @@ class _ChatViewState extends State<ChatView> {
                     if (state is ChatError) {
                       return Center(child: Text(state.error));
                     }
-                    return Container();
+                    return const SizedBox.shrink();
                   },
                 ),
               ),
-              Divider(height: 1),
+              const Divider(height: 1),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
+                  horizontal: 12,
+                  vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  boxShadow: [
+                  color: Colors.white,
+                  boxShadow: const [
                     BoxShadow(
                       color: Colors.black12,
                       blurRadius: 4,
@@ -206,12 +237,16 @@ class _ChatViewState extends State<ChatView> {
                         controller: _controller,
                         decoration: InputDecoration(
                           hintText: 'Type a message...',
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                          hintStyle: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 15,
                           ),
-                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 14,
+                          ),
                           filled: true,
+                          fillColor: Colors.grey[100],
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24),
                             borderSide: BorderSide.none,
@@ -219,13 +254,14 @@ class _ChatViewState extends State<ChatView> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     CircleAvatar(
-                      radius: 22,
-                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      radius: 24,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
                       child: IconButton(
+                        icon: const Icon(Icons.send, color: Colors.black87),
                         onPressed: _sendMessage,
-                        icon: Icon(Icons.send, color: Colors.white),
                       ),
                     ),
                   ],

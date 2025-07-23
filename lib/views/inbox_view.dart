@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hilo/crud/local_database_service.dart';
 import 'package:hilo/dialogs/add_conversation_dialog.dart';
+import 'package:hilo/features/auth/bloc/auth_bloc.dart';
+import 'package:hilo/features/auth/bloc/auth_event.dart';
+import 'package:hilo/features/auth/firebase_auth_provider.dart';
 import 'package:hilo/features/inbox/bloc/inbox_bloc.dart';
 import 'package:hilo/features/inbox/bloc/inbox_event.dart';
 import 'package:hilo/features/inbox/bloc/inbox_state.dart';
 
 import 'package:hilo/features/inbox/inbox_model.dart';
+import 'package:hilo/person.dart';
 import 'package:hilo/socket/socket_service.dart';
 import 'package:hilo/views/chat_view.dart';
-import 'package:hilo/views/login/bloc/login_view.dart';
+import 'package:hilo/views/login/login_view.dart';
+import 'package:hilo/views/profile_view.dart';
 
 class InboxScreen extends StatelessWidget {
   final String userEmail;
@@ -31,20 +37,35 @@ class InboxView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF7F7F7),
+      backgroundColor: const Color(0xFFF2F2F7),
       appBar: AppBar(
-        title: Text(
-          'Chat',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        title: const Text(
+          'Inbox',
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 22),
         ),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         elevation: 0,
+        centerTitle: true,
+        foregroundColor: Colors.black,
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Profile',
+            onPressed: () async {
+              final email = FirebaseAuth.instance.currentUser?.email;
+              if (email != null) {
+                final user = await LocalDatabaseService().getUserByEmail(email);
+                if (user != null) {
+                  context.read<InboxBloc>().add(LoadProfile(user));
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_outlined),
+            tooltip: 'Logout',
             onPressed: () {
-              context.read<InboxBloc>().add(SignOut());
+              context.read<AuthBloc>().add(const AuthEventLogOut());
             },
           ),
         ],
@@ -55,7 +76,8 @@ class InboxView extends StatelessWidget {
             context.read<InboxBloc>().add(LoadInbox(userEmail));
           });
         },
-        child: Icon(Icons.add),
+        backgroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
       body: BlocListener<InboxBloc, InboxState>(
         listener: (context, state) async {
@@ -69,101 +91,131 @@ class InboxView extends StatelessWidget {
                     ),
               ),
             );
+
             if (result == true) {
               context.read<InboxBloc>().add(LoadInbox(userEmail));
             }
-          }
-          if (state is SignOutState) {
-            Navigator.of(
-              context,
-            ).pushReplacement(MaterialPageRoute(builder: (_) => LoginView()));
           }
         },
         child: BlocBuilder<InboxBloc, InboxState>(
           builder: (context, state) {
             if (state is InboxLoading) {
-              return Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator());
+              // You can replace with shimmer effect
             }
+
             if (state is InboxError) {
-              return Center(child: Text('Error: ${state.error}'));
+              return Center(
+                child: Text(
+                  'Oops! ${state.error}',
+                  style: const TextStyle(color: Colors.redAccent),
+                ),
+              );
             }
+
+            if (state is LoadProfileState) {
+              return ProfileView(user: state.user);
+            }
+
             if (state is InboxLoaded) {
               final conversations = state.conversations;
+              final users = state.users;
+
               return ListView.builder(
-                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                padding: const EdgeInsets.all(12),
                 itemCount: conversations.length,
                 itemBuilder: (context, index) {
                   final convo = conversations[index];
-
+                  final user = users[index];
                   final isSentByUser = convo.lastSenderEmail == userEmail;
-                  return InkWell(
+
+                  return GestureDetector(
                     onTap: () {
                       context.read<InboxBloc>().add(SelectConversation(convo));
                     },
                     child: Container(
-                      margin: EdgeInsets.symmetric(vertical: 6),
-                      padding: EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 14,
-                      ),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 5,
-                            offset: Offset(0, 3),
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 25,
-                            backgroundColor: Colors.grey[300],
-                            child: Text(
-                              convo.otherUserEmail[0].toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 20,
-                                color: Colors.black,
-                              ),
+                          GestureDetector(
+                            onTap: () async {
+                              final profileUrl = await LocalDatabaseService()
+                                  .getProfileUrl(convo.otherUserEmail);
+                              final person = Person(
+                                profileUrl,
+                                name: convo.otherUserName ?? '',
+                                email: convo.otherUserEmail,
+                                bio: 'Hey! I’m using HILO',
+                              );
+                              context.read<InboxBloc>().add(
+                                LoadProfile(person),
+                              );
+                            },
+                            child: CircleAvatar(
+                              radius: 26,
+                              backgroundImage:
+                                  user.profilePictureUrl != null
+                                      ? NetworkImage(user.profilePictureUrl!)
+                                      : null,
+                              backgroundColor: Colors.grey[200],
+                              child:
+                                  user.profilePictureUrl == ''
+                                      ? const Icon(
+                                        Icons.person,
+                                        size: 28,
+                                        color: Colors.grey,
+                                      )
+                                      : null,
                             ),
                           ),
-                          SizedBox(width: 12),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  convo.otherUserName!,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                  convo.otherUserName ?? '',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
                                     fontSize: 16,
                                   ),
                                 ),
-                                SizedBox(height: 4),
+                                const SizedBox(height: 4),
                                 Text(
                                   "${isSentByUser ? "You" : convo.otherUserEmail}: ${convo.lastMessage}",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
+                                    fontSize: 14,
                                     fontWeight:
                                         isSentByUser
-                                            ? FontWeight.bold
+                                            ? FontWeight.w500
                                             : FontWeight.normal,
                                     color: Colors.grey[700],
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
-                            convo.lastUpdated.toString().substring(
-                              11,
-                              16,
-                            ), // HH:mm
-                            style: TextStyle(color: Colors.grey),
+                            convo.lastUpdated.toString().substring(11, 16),
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -172,7 +224,8 @@ class InboxView extends StatelessWidget {
                 },
               );
             }
-            return SizedBox.shrink();
+
+            return const SizedBox.shrink();
           },
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:hilo/features/inbox/inbox_model.dart';
+import 'package:hilo/person.dart';
 
 abstract class InboxEvent extends Equatable {
   @override
@@ -24,7 +25,17 @@ class SelectConversation extends InboxEvent {
   List<Object?> get props => [conversation];
 }
 
-class SignOut extends InboxEvent {
+class InitializeInbox extends InboxEvent {
+  final String userEmail;
+
+  InitializeInbox(this.userEmail);
+
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [userEmail];
+}
+
+class LoadProfile extends InboxEvent {
+  final Person user;
+
+  LoadProfile(this.user);
 }

@@ -11,11 +11,10 @@ A real-time chat application built with **Flutter** for the frontend and **Node.
 - [Local Database (Sqflite)](#local-database-sqflite)
 - [Backend (Node.js + Socket.IO)](#backend-nodejs--socketio)
 - [Frontend (Flutter)](#frontend-flutter)
-- [Message Seen ("Read Receipts") Implementation](#message-seen-read-receipts-implementation)
 - [How to Run](#how-to-run)
 - [Contributing](#contributing)
 - [License](#license)
-
+- [Author](#author)
 ---
 
 ## Features
@@ -28,9 +27,8 @@ A real-time chat application built with **Flutter** for the frontend and **Node.
 - Read receipts (message "seen" status) with real-time UI updates:
   - Single tick for sent messages.
   - Double blue ticks for seen messages.
-- Notifications on new message receipt.
 - Message history loading from local DB and backend sync.
-- Safe and robust handling of offline scenarios.
+- Safe and robust handling through offline database.
 
 ---
 
@@ -91,23 +89,6 @@ A real-time chat application built with **Flutter** for the frontend and **Node.
 
 ---
 
-## Frontend (Flutter)
-
-### Chat View (ChatView)
-
-- Displays chat messages with customized UI bubbles.
-- Displays sender and receiver's messages aligned correctly.
-- Circular avatar shows profile picture if available, otherwise a fallback icon.
-- Listens to socket events for:
-  - New message receipt (`messageReceived`).
-  - Messages marked as seen (`markedAsSeen`).
-- Emits `messageSeen` events:
-  - Immediately on receiving a message in the chat view.
-  - Optionally for all unseen messages when entering the chat.
-- Shows ticks indicating message send/seen status using double-check and colors.
-- Refreshes messages from the Bloc on relevant socket events.
-
-
 
 ## How to Run
 
@@ -117,7 +98,7 @@ A real-time chat application built with **Flutter** for the frontend and **Node.
 2. Setup PostgreSQL and create databases/tables as per schema.
 3. Configure `.env` variables for DB and server ports.
 4. Run `npm install` to install dependencies.
-5. Run `node server.js` to start the backend server.
+5. Run `node server.js` to start the backend server or Host the GitHub repo on a cloud server as web service and access it through the given endpoint.
 
 ### Frontend
 
@@ -126,7 +107,7 @@ A real-time chat application built with **Flutter** for the frontend and **Node.
 3. Update backend URLs in `SocketService`.
 4. Run on an emulator or real device: `flutter run`.
 
----
+
 
 ## Contributing
 
@@ -156,3 +137,6 @@ MIT License © 2025
 
 If you have any questions or need more details about a specific part of the implementation, feel free to ask!
 
+## Author
+**Pranjal Sharma**
+**Email:** pranjalsharma.hp@gmail.com

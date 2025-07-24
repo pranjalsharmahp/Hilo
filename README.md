@@ -138,5 +138,5 @@ MIT License © 2025
 If you have any questions or need more details about a specific part of the implementation, feel free to ask!
 
 ## Author
-**Pranjal Sharma**. 
+**Pranjal Sharma**.
 **Email:** pranjalsharma.hp@gmail.com

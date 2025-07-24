@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 class SocketService {
   void Function(dynamic data)? onMessageReceived;
+  void Function(dynamic data)? onMessageSeen;
   // Singleton pattern
   static final SocketService _instance = SocketService._internal();
   factory SocketService() => _instance;
@@ -33,6 +34,15 @@ class SocketService {
       print('Socket connected');
       socket.emit('joinRoom', myEmail);
       _connected = true;
+    });
+
+    socket.on('markedAsSeen', (data) async {
+      final userEmail = data['userEmail'];
+      final otherUserEmail = data['otherUserEmail'];
+      LocalDatabaseService().markMessagesAsSeen(userEmail, otherUserEmail);
+      if (onMessageSeen != null) {
+        onMessageSeen!(data);
+      }
     });
 
     socket.on('messageReceived', (data) async {
@@ -141,6 +151,7 @@ class SocketService {
       'receiver_email': receiverEmail,
       'content': message,
       'message_id': messageId,
+      'is_seen': false,
     });
 
     print('Socket message emit sent.');
@@ -165,7 +176,7 @@ class SocketService {
           'receiver_email': receiverEmail,
           'content': message,
           'timestamp': DateTime.now().toIso8601String(),
-          'is_seen': 1,
+          'is_seen': 0,
           'type': 'TEXT',
         });
         await LocalDatabaseService().upsertConversation({
@@ -181,6 +192,13 @@ class SocketService {
     } catch (e) {
       print('HTTP POST error: $e');
     }
+  }
+
+  Future<void> markAsSeen(String userEmail, String otherUserEmail) async {
+    socket.emit('messageSeen', {
+      'userEmail': userEmail,
+      'otherUserEmail': otherUserEmail,
+    });
   }
 
   void disconnect() {

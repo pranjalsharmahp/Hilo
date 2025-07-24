@@ -40,11 +40,31 @@ class _ChatViewState extends State<ChatView> {
 
     SocketService().onMessageReceived = (data) {
       final msg = Message.fromJson(data);
+
       final shouldReload =
           (msg.senderEmail == widget.currentUserEmail &&
               msg.receiverEmail == widget.otherUserEmail) ||
           (msg.senderEmail == widget.otherUserEmail &&
               msg.receiverEmail == widget.currentUserEmail);
+      if (shouldReload) {
+        SocketService().markAsSeen(msg.receiverEmail, msg.senderEmail);
+        _chatBloc.add(
+          LoadMessages(
+            user1: widget.currentUserEmail,
+            user2: widget.otherUserEmail,
+          ),
+        );
+      }
+    };
+    SocketService().onMessageSeen = (data) {
+      final senderEmail = data['userEmail'];
+      final receiverEmail = data['otherUserEmail'];
+
+      final shouldReload =
+          (senderEmail == widget.currentUserEmail &&
+              receiverEmail == widget.otherUserEmail) ||
+          (senderEmail == widget.otherUserEmail &&
+              receiverEmail == widget.currentUserEmail);
       if (shouldReload) {
         _chatBloc.add(
           LoadMessages(
@@ -211,10 +231,15 @@ class _ChatViewState extends State<ChatView> {
                                       ),
                                       if (isMe) ...[
                                         const SizedBox(width: 4),
-                                        const Icon(
-                                          Icons.check,
+                                        Icon(
+                                          msg.isSeen
+                                              ? Icons.done_all
+                                              : Icons.check,
                                           size: 14,
-                                          color: Colors.blueGrey,
+                                          color:
+                                              msg.isSeen
+                                                  ? Colors.blue
+                                                  : Colors.blueGrey,
                                         ),
                                       ],
                                     ],

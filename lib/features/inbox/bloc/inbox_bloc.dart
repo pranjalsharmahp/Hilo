@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hilo/crud/local_database_service.dart';
@@ -13,6 +15,7 @@ class InboxBloc extends Bloc<InboxEvent, InboxState> {
   InboxBloc() : super(InboxInitial()) {
     on<LoadInbox>((event, emit) async {
       emit(InboxLoading());
+
       try {
         if (!_hasInitialized) {
           await LocalDatabaseService().initialLocalSync(event.userEmail);
@@ -30,7 +33,7 @@ class InboxBloc extends Bloc<InboxEvent, InboxState> {
             convo.otherUserEmail,
           );
           users.add(user!);
-          convo.otherUserName = user?.name ?? convo.otherUserEmail;
+          convo.otherUserName = user.name;
         }
 
         emit(InboxLoaded(convos, users));
@@ -43,6 +46,10 @@ class InboxBloc extends Bloc<InboxEvent, InboxState> {
       emit(LoadProfileState(event.user));
     });
     on<SelectConversation>((event, emit) {
+      SocketService().markAsSeen(
+        event.conversation.user1Email,
+        event.conversation.user2Email,
+      );
       emit(ConversationSelected(event.conversation));
       // After this, you may choose to emit InboxLoaded again to "reset" the state if needed
     });

@@ -4,8 +4,10 @@ class Message {
   final String content;
   final String timestamp;
   final String messageId;
+  final bool isSeen;
 
   Message({
+    required this.isSeen,
     required this.messageId,
     required this.senderEmail,
     required this.receiverEmail,
@@ -14,7 +16,17 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
+    final isSeenValue = json['is_seen'];
+    bool isSeenBool = false;
+
+    if (isSeenValue is int) {
+      isSeenBool = isSeenValue >= 1;
+    } else if (isSeenValue is bool) {
+      isSeenBool = isSeenValue;
+    }
+
     return Message(
+      isSeen: isSeenBool,
       senderEmail: json['sender_email'],
       receiverEmail: json['receiver_email'],
       content: json['content'],

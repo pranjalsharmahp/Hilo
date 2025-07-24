@@ -334,4 +334,17 @@ class LocalDatabaseService {
       await db.delete(tableName! as String); // deletes all rows, NOT the tables
     }
   }
+
+  Future<void> markMessagesAsSeen(
+    String userEmail,
+    String otherUserEmail,
+  ) async {
+    final db = await database;
+    await db.update(
+      'messages',
+      {'is_seen': 1}, // SQLite uses 1 for TRUE
+      where: 'sender_email = ? AND receiver_email = ? AND is_seen = 0',
+      whereArgs: [otherUserEmail, userEmail],
+    );
+  }
 }

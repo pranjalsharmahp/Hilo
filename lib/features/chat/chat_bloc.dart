@@ -10,6 +10,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ChatBloc() : super(ChatInitial()) {
     on<LoadMessages>((event, emit) async {
       emit(ChatLoading());
+
       try {
         final messages = await ChatService.loadMessagesFromLocalDB(
           event.user1,
@@ -17,7 +18,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
         emit(ChatLoaded(messages));
       } catch (e) {
-        emit(ChatError('Failed to load messages.'));
+        emit(ChatError('Failed to load messages. $e'));
       }
     });
 

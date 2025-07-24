@@ -103,6 +103,8 @@ class _InboxViewState extends State<InboxView> {
       body: BlocListener<InboxBloc, InboxState>(
         listener: (context, state) async {
           if (state is ConversationSelected) {
+            print('state issssss Conversationselected');
+
             final result = await Navigator.of(context).push(
               MaterialPageRoute(
                 builder:
@@ -139,6 +141,7 @@ class _InboxViewState extends State<InboxView> {
             }
 
             if (state is InboxLoaded) {
+              print('state iisssss Inbox loaded');
               final conversations = state.conversations;
               final users = state.users;
 
